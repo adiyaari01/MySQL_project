@@ -1,0 +1,145 @@
+use book_store;
+
+-- search book by name
+select * from book b, inventory i where b.book_id = i.book_id AND b.name = 'Single for the Summer';
+
+-- search by author name                   
+SELECT  b.book_id,  b.name,
+  GROUP_CONCAT(CONCAT(a.first_name,' ' , a.last_name)) AS author_names,
+  GROUP_CONCAT(a.author_id) as author_ids
+FROM book b
+LEFT JOIN author_book ab ON b.book_id = ab.book_id
+LEFT JOIN author a ON ab.author_id = a.author_id
+WHERE a.first_name= 'Laurence'
+GROUP BY b.book_id;
+                  
+-- search customer
+select  * from customer c where c.customer_id = 1;
+
+-- search purchase id
+select * from purchase_customer pc where pc.purchase_id = 2 ;
+
+-- 1 
+select book.name, inventory.count from book left join inventory on book.book_id = inventory.book_id where name='Robinson Crusoe' And inventory.count>0;
+
+-- 2
+select concat(first_name, " ", last_name) as name from customer order by date_created limit 1;
+
+-- 3
+select book.* from book inner join inventory on book.book_id = inventory.book_id where inventory.count > 0 order by time_stamp limit 1;
+
+-- 4
+select * from reservation inner join reservation_book on reservation.reservation_id = reservation_book.reservation_id inner join book on book.book_id = reservation_book.book_id 
+inner join customer c on c.customer_id = reservation.customer_id order by time_stamp;
+
+-- 5
+select book.name, sum(inventory.sold_counter) as sold_books_amount from book left join inventory on book.book_id = inventory.book_id where book.name='Clarissa';
+
+-- 6
+select a.first_name, a.last_name from author a, purchase_customer pc, purchase_customer_book pcb, author_book ab where pc.purchase_id = pcb.purchase_id AND pcb.book_id = ab.book_id AND a.author_id = ab.author_id
+AND pc.purchase_date between '2018-08-05' and '2020-08-05' group by a.author_id order by count(*) desc limit 1;
+
+-- 7
+select customer.first_name, customer.last_name from customer inner join purchase_customer on customer.customer_id = purchase_customer.customer_id group by customer.customer_id order by count(*) desc limit 3;
+
+ -- 8
+select count(b.name) as translations_amount,b.name from book b inner join inventory i on b.book_id = i.book_id
+inner join book_edition be on b.book_id = be.book_id where be.translator IS NOT NULL
+group by b.name order by count(b.name) desc limit 1 ;
+ 
+-- 9 
+select book.name, pc.purchase_date, pcb.price, pc.purchase_id from book, purchase_customer pc, purchase_customer_book pcb, customer c where c.customer_id = pc.customer_id AND pc.purchase_id = pcb.purchase_id AND book.book_id = pcb.book_id  AND c.customer_id='5' order by pc.purchase_date;
+
+-- 10
+select book.name, rb.count, reservation.time_stamp, inventory.*, pcb.*, pc.purchase_date from customer inner join reservation on customer.customer_id = reservation.customer_id
+	inner join reservation_book rb on rb.reservation_id = reservation.reservation_id 
+	inner join book on book.book_id = rb.book_id 
+	left join inventory on inventory.book_id = book.book_id
+    left join purchase_customer_book pcb on pcb.book_id = book.book_id 
+    left join purchase_customer pc on pc.purchase_id = pcb.purchase_id AND pc.customer_id = customer.customer_id
+    where customer.customer_id = 1
+    order by reservation.time_stamp;
+
+
+-- 11
+select sum((d.price * book.weight)+pcb.price) from purchase_customer pc
+inner join deliveries d on pc.purchase_id = d.purchase_id
+inner join purchase_customer_book pcb on pcb.purchase_id = pc.purchase_id
+inner join book on book.book_id = pcb.book_id where pc.purchase_id = 2;
+
+-- 12
+select * from deliveries d left join purchase_customer pc  on pc.purchase_id = d.purchase_id
+ where pc.customer_id = '2' and d.purchase_id in 
+(select d.purchase_id from deliveries d  group by d.purchase_id having count(d.purchase_id)>1)
+ order by d.purchase_id;
+
+-- 13
+select d.status from deliveries d, purchase_customer pc where d.purchase_id = pc.purchase_id And d.purchase_id=2; -- inner join deliveries on deliveries.delivery_id = purchase_customer.delivery_id where delivery_id = 1;
+
+-- 14
+select sum((d.price * book.weight)) from purchase_customer pc
+inner join deliveries d on pc.purchase_id = d.purchase_id 
+inner join purchase_customer_book pcb on pcb.purchase_id = pc.purchase_id 
+inner join book on book.book_id = pcb.book_id
+ inner join delivery_company dc on dc.company_id = d.delivery_company
+ where dc.company_name = 'Xpress' AND month(d.delivery_date) = 8 AND year(d.delivery_date) = 2020;
+ 
+-- 15
+select sum(pcb.price) from purchase_customer pc inner join purchase_customer_book pcb on pc.purchase_id = pcb.purchase_id where pc.payment_method='bit' AND month(pc.purchase_date) = 7 AND year(pc.purchase_date) = 2020;
+
+-- 16
+select pcb.purchase_id,sum(pcb.price) as sum_purchase, pc.purchase_date from purchase_customer pc, purchase_customer_book pcb where
+pc.purchase_id = pcb.purchase_id AND pc.purchase_date>'2018-08-01' group by pc.purchase_date having sum_purchase>
+(select avg(pcb.price) as annual_avg from purchase_customer pc inner join purchase_customer_book pcb
+where pc.purchase_id=pcb.purchase_id AND pc.purchase_date>'2018-08-01');
+
+-- 17
+select count(*), dc.company_name from deliveries d, delivery_company dc where dc.company_id = d.delivery_company AND d.delivery_date>'2019-06-02' group by dc.company_name;
+
+-- 18
+select d.*, d.deliveries_id, b.name from deliveries d
+inner join deliveries_books db on d.deliveries_id = db.deliveries_id 
+inner join book b on db.book_id = b.book_id 
+group by d.deliveries_id, b.name having count(*)>=2; 
+
+-- 19
+select c.*, pc.purchase_date from purchase_customer pc, customer c 
+where pc.customer_id = c.customer_id AND pc.purchase_date<'2018-07-27' and c.customer_id NOT IN 
+(select c.customer_id from purchase_customer pc, customer c 
+where pc.customer_id = c.customer_id AND pc.purchase_date>'2018-07-27') group by c.customer_id;
+
+-- 20
+
+SELECT column_name FROM information_schema.columns 
+WHERE table_schema = 'book_store' AND table_name = 'customer ';
+			select c.*,r.contact_customer from customer c, reservation r, reservation_book rb
+            where r.customer_id = c.customer_id AND rb.reservation_id = r.reservation_id AND r.contact_customer
+            IS NOT NULL and r.contact_customer <= curdate() - 14 AND 
+            NOT EXISTS( select * from purchase_customer pc, purchase_customer_book pcb
+            where pc.purchase_id = pcb.purchase_id AND pc.customer_id = c.customer_id AND pcb.book_id = rb.book_id);
+            
+-- 21
+select sum(i2.count) as AccumelatedNoOfBooks,month(i1.time_stamp),year(i1.time_stamp) 
+from inventory i1
+join inventory i2 on month(i2.time_stamp) <=month(i1.time_stamp) and year(i2.time_stamp)<=year(i1.time_stamp) and i2.location=i1.location
+where i1.location = 'storage' and i1.count>0 and i2.location='storage' and i2.count>0 and i2.time_stamp<=i1.time_stamp and month(i2.time_stamp) <=month(i1.time_stamp) and year(i2.time_stamp)<=year(i1.time_stamp)
+group by month(i1.time_stamp),year(i1.time_stamp) order by month(i1.time_stamp),year(i1.time_stamp);
+
+
+-- 22A
+select count(*) as books_bought_by_store, sum(ps.count*ps.book_price) as books_payment from purchase_store ps where ps.purchase_date between '2008-01-01' and '2020-01-29';
+
+-- 22B
+select sum(pcb.price)-sum(ps.count*ps.book_price) as revenue, 
+month(pc.purchase_date) as month, year(pc.purchase_date) as year 
+from purchase_customer pc, purchase_customer_book pcb, purchase_store ps 
+where pcb.purchase_id = pc.purchase_id AND month(pc.purchase_date)= 8 AND year(pc.purchase_date)=2020; 
+
+-- 23
+select avg(pcb.price), year(pc.purchase_date) from purchase_customer pc inner join purchase_customer_book pcb where pc.purchase_id=pcb.purchase_id group by year(pc.purchase_date) order by year(pc.purchase_date);
+
+-- 24
+select wmh.hour_payment*wmh.hours from working_month_hours wmh inner join employees e on e.employee_id = wmh.employee_id where e.employee_id=1 AND wmh.month = 6 AND wmh.year = 2018;
+
+-- 25
+select e.first_name, e.last_name from employees e inner join purchase_customer pc on e.employee_id = pc.employee_id where month(pc.purchase_date)= 7  AND year(pc.purchase_date) = 2020 group by e.employee_id order by count(*) desc limit 1;
